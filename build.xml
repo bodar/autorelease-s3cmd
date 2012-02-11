@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="release">
+
+    <property name="artifacts" value="artifacts"/>
+    <property file="${artifacts}/release.properties"/>
+
+    <taskdef resource="net/sf/antcontrib/antlib.xml" classpath="lib/ant-contrib.jar"/>
+
+    <macrodef name="s3cmd">
+        <attribute name="folder"/>
+        <attribute name="file"/>
+        <attribute name="todir"/>
+
+        <sequential>
+            <exec executable="s3cmd" failonerror="true">
+                <arg value="put"/>
+                <arg value="--acl-public"/>
+                <arg value="--guess-mime-type"/>
+                <arg value="@{folder}/@{file}"/>
+                <arg value="@{todir}@{file}"/>
+            </exec>
+        </sequential>
+    </macrodef>
+
+    <target name="release">
+        <fail unless="bucket.name" message="bucket.name must be set"/>
+
+        <for list="${release.files}" param="file">
+            <sequential>
+                <s3cmd folder="${artifacts}" file="@{file}" todir="${bucket.name}/${release.path}"/>
+                <checksum file="${artifacts}/@{file}" algorithm="md5"/>
+                <s3cmd folder="${artifacts}" file="@{file}.md5" todir="${bucket.name}/${release.path}"/>
+                <checksum file="${artifacts}/@{file}" algorithm="sha1"/>
+                <s3cmd folder="${artifacts}" file="@{file}.sha1" todir="${bucket.name}/${release.path}"/>
+            </sequential>
+        </for>
+    </target>
+</project>
