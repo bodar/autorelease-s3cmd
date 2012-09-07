@@ -27,11 +27,17 @@
 
         <for list="${release.files}" param="file">
             <sequential>
-                <s3cmd folder="${artifacts}" file="@{file}" todir="${bucket.name}/${release.path}"/>
+		<if><isset property="@{file}.path"/><then> 
+			<var name="@file.release.path" value="${@{file}.path}"/>
+                </then><else>
+			<var name="@file.release.path" value="${release.path}"/>
+		</else></if>
+
+                <s3cmd folder="${artifacts}" file="@{file}" todir="${bucket.name}/${@file.release.path}"/>
                 <checksum file="${artifacts}/@{file}" algorithm="md5"/>
-                <s3cmd folder="${artifacts}" file="@{file}.md5" todir="${bucket.name}/${release.path}"/>
+                <s3cmd folder="${artifacts}" file="@{file}.md5" todir="${bucket.name}/${@file.release.path}"/>
                 <checksum file="${artifacts}/@{file}" algorithm="sha1"/>
-                <s3cmd folder="${artifacts}" file="@{file}.sha1" todir="${bucket.name}/${release.path}"/>
+                <s3cmd folder="${artifacts}" file="@{file}.sha1" todir="${bucket.name}/${@file.release.path}"/>
             </sequential>
         </for>
     </target>
