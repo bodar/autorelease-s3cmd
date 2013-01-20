@@ -15,6 +15,7 @@
             <exec executable="s3cmd" failonerror="true">
                 <arg value="put"/>
                 <arg value="--acl-public"/>
+                <arg value='--add-header=Cache-Control:"public, max-age=60"'/>
                 <arg value="--guess-mime-type"/>
                 <arg value="@{folder}/@{file}"/>
                 <arg value="@{todir}@{file}"/>
