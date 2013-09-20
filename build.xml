@@ -7,9 +7,8 @@
     <taskdef resource="net/sf/antcontrib/antlib.xml" classpath="lib/ant-contrib.jar"/>
 
     <macrodef name="s3cmd">
-        <attribute name="folder"/>
         <attribute name="file"/>
-        <attribute name="todir"/>
+        <attribute name="url"/>
 
         <sequential>
             <exec executable="s3cmd" failonerror="true">
@@ -17,16 +16,42 @@
                 <arg value="--acl-public"/>
                 <arg value='--add-header=Cache-Control:"public, max-age=3600"'/>
                 <arg value="--guess-mime-type"/>
-                <arg value="@{folder}/@{file}"/>
-                <arg value="@{todir}@{file}"/>
+                <arg value="@{file}"/>
+                <arg value="@{url}"/>
             </exec>
         </sequential>
     </macrodef>
 
+    <macrodef name="pack">
+        <attribute name="input"/>
+        <attribute name="output"/>
+
+        <sequential>
+            <exec executable="pack200" failonerror="true">
+                <arg value="@{output}"/>
+                <arg value="@{input}"/>
+            </exec>
+        </sequential>
+    </macrodef>
+
+   <macrodef name="upload">
+        <attribute name="file"/>
+        <attribute name="url"/>
+
+        <sequential>
+		<s3cmd file="@{file}" url="@{url}"/>
+        	<checksum file="@{file}" algorithm="md5"/>
+        	<s3cmd file="@{file}.md5" url="@{url}.md5"/>
+        	<checksum file="@{file}" algorithm="sha1"/>
+       		<s3cmd file="@{file}.sha1" url="@{url}.sha1"/>
+        </sequential>
+   </macrodef>
+
+
     <target name="release">
         <fail unless="bucket.name" message="bucket.name must be set"/>
 
-        <for list="${release.files}" param="file">
+        <for list="${release.files}" param="file" parallel="true">
             <sequential>
 		<if><isset property="@{file}.path"/><then> 
 			<var name="@file.release.path" value="${@{file}.path}"/>
@@ -34,11 +59,13 @@
 			<var name="@file.release.path" value="${release.path}"/>
 		</else></if>
 
-                <s3cmd folder="${artifacts}" file="@{file}" todir="${bucket.name}/${@file.release.path}"/>
-                <checksum file="${artifacts}/@{file}" algorithm="md5"/>
-                <s3cmd folder="${artifacts}" file="@{file}.md5" todir="${bucket.name}/${@file.release.path}"/>
-                <checksum file="${artifacts}/@{file}" algorithm="sha1"/>
-                <s3cmd folder="${artifacts}" file="@{file}.sha1" todir="${bucket.name}/${@file.release.path}"/>
+                <if><contains string="${@{file}.labels}" substring="Jar" /><then>
+			<propertyregex property="packfile" input="@{file}" regexp="jar$" replace="pack.gz" override="true"/>
+                        <pack input="${artifacts}/@{file}" output="${artifacts}/${packfile}"/>
+			<upload file="${artifacts}/${packfile}" url="${bucket.name}/${@file.release.path}${packfile}"/> 
+                </then></if>
+
+                <upload file="${artifacts}/@{file}" url="${bucket.name}/${@file.release.path}@{file}"/>
             </sequential>
         </for>
     </target>
