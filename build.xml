@@ -53,19 +53,21 @@
 
         <for list="${release.files}" param="file" parallel="true">
             <sequential>
+		<local name="file.release.path"/>
 		<if><isset property="@{file}.path"/><then> 
-			<var name="@file.release.path" value="${@{file}.path}"/>
+			<property name="file.release.path" value="${@{file}.path}"/>
                 </then><else>
-			<var name="@file.release.path" value="${release.path}"/>
+			<property name="file.release.path" value="${release.path}"/>
 		</else></if>
 
                 <if><contains string="${@{file}.labels}" substring="Jar" /><then>
+			<local name="packfile"/>
 			<propertyregex property="packfile" input="@{file}" regexp="jar$" replace="pack.gz" override="true"/>
                         <pack input="${artifacts}/@{file}" output="${artifacts}/${packfile}"/>
-			<upload file="${artifacts}/${packfile}" url="${bucket.name}/${@file.release.path}${packfile}"/> 
+			<upload file="${artifacts}/${packfile}" url="${bucket.name}/${file.release.path}${packfile}"/> 
                 </then></if>
 
-                <upload file="${artifacts}/@{file}" url="${bucket.name}/${@file.release.path}@{file}"/>
+                <upload file="${artifacts}/@{file}" url="${bucket.name}/${file.release.path}@{file}"/>
             </sequential>
         </for>
     </target>
