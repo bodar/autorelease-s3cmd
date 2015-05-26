@@ -13,7 +13,7 @@ s3() {
 	local filename=${1}
 	local url=${2}
 
-	echo s3cmd put --acl-public --add-header=Cache-Control:"public, max-age=3600" --guess-mime-type ${filename} ${url}
+	s3cmd put --acl-public --add-header=Cache-Control:"public, max-age=3600" --guess-mime-type ${filename} ${url}
 }
 
 pack() {
