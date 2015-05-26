@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -e
+
+artifacts=artifacts
+
+property() {
+	local key=${1}=
+	grep "$key" ${artifacts}/release.properties | cut -d'=' -f2 | sed 's/\\//g'
+}
+
+s3() {
+	local filename=${1}
+	local url=${2}
+
+	echo s3cmd put --acl-public --add-header=Cache-Control:"public, max-age=3600" --guess-mime-type ${filename} ${url}
+}
+
+pack() {
+	local input=${1}
+	local output=${2}
+	
+	echo Packing ${input}
+	pack200 ${output} ${input}
+}
+
+checksum() {
+	local filename=${1}
+	local algorithm=${2}
+
+	local result=($(${algorithm}sum ${filename}))
+	echo ${result} > ${filename}.${algorithm}
+}
+
+upload() {
+	local filename=${1}
+	local url=${2}
+
+	echo Uploading ${filename} and checksums...
+	s3 ${filename} ${url}
+	checksum ${filename} md5
+	s3 ${filename}.md5 ${url}.md5
+	checksum ${filename} sha1
+	s3 ${filename}.sha1 ${url}.sha1
+}
+
+release() {
+	: ${bucket_name?"bucket_name must be set"}
+	local release_path=(`property release.path`)
+	local release_files=(`property release.files`)
+
+       	local IFS=","
+        for filename in ${release_files}
+       	do
+		local file_release_path=(`property ${filename}.path`)
+		local path=${file_release_path:-$(echo ${release_path})}
+		
+		local label=(`property ${filename}.labels`)
+		if [[ $label = *Jar* ]]; then
+			local packfile=${filename%jar}pack.gz
+			pack ${artifacts}/${filename} ${artifacts}/${packfile}
+			upload ${artifacts}/${packfile} ${bucket_name}/${path}${packfile}
+		fi
+
+		upload ${artifacts}/${filename} ${bucket_name}/${path}${filename}
+       	done
+}
+
+release
+
