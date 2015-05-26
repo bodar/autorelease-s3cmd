@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
+PATH=${JAVA_HOME}/bin:${PATH}
 artifacts=artifacts
 
 property() {
